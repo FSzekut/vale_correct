@@ -1,0 +1,261 @@
+Estudo Guiado
+Desafio: Análise Avançada de Dados
+Antecipação de Alertas Críticos em Frotas de Mineração
+Este estudo guiado orienta o participante pelo fluxo analítico do desafio, desde o entendimento do
+problema de negócio até a apresentação de resultados. Cada seção define Conteúdos Mínimos (CM X.Y)
+que devem ser abordados no relatório final. Participantes com maior experiência são encorajados a ir
+além dos mínimos.
+O desafio é aberto: supervisionado, não supervisionado, séries temporais, detecção de anomalias,
+modelos de sobrevivência, deep learning — qualquer abordagem é válida, desde que justificada. O
+objetivo é explorar os dados com criatividade e rigor analítico.
+Nota: Sempre que uma alteração, exclusão ou decisão metodológica relevante for tomada, registre o ANTES e o
+DEPOIS com a justificativa correspondente (Controle de Alterações).
+1. Entendimento do Negócio (Business Understanding)
+Antes de qualquer análise técnica, é fundamental compreender o contexto operacional e traduzir o
+problema de negócio em uma pergunta analítica clara e mensurável.
+Conteúdo Mínimo 1.1 — Contextualização da Operação de Mina
+• Fluxo operacional: descrever o ciclo de apontamentos — cada registro representa um ciclo de
+atividade de um equipamento (Inicio/Fim), com identificação do equipamento (Tag), modelo e frota
+(Frota), tipo (Caminhao, Carregadeira, etc.), classe da atividade e operador anonimizado.
+• Alertas 'Don't Go': explicar o que são alertas críticos de condição de equipamento. Um alerta 'don't
+go' sinaliza que o equipamento não deve operar, com impacto direto em segurança, disponibilidade
+de frota e produção da mina.
+• Regras de negócio: referenciar o arquivo Alarmes - SUL_SUDESTE.xlsx como o catálogo de regras que
+define quando um alerta é disparado — cada linha especifica uma combinação de TIPO + EVENTO +
+SITUACAO + NIVEL que constitui um alerta 'don't go'. Este arquivo é equivalente a regras codificadas
+em Python (thresholds e condições). Listar os eventos de NIVEL 'Muito Alto' como exemplos de
+criticidade máxima.
+[ Figura 1: Diagrama do fluxo operacional: ciclo de apontamento → telemetria → alerta ]
+Conteúdo Mínimo 1.2 — Definição do Problema Analítico
+• Perguntas analíticas de referência: o participante deve escolher ao menos uma pergunta de negócio
+para orientar sua análise. As perguntas abaixo são exemplos validados — o participante pode adaptálas ou propor outras:
+• Quais equipamentos têm maior risco de gerar um alerta 'don't go' nas próximas 4 horas,
+considerando o padrão atual de operação?
+• É possível prever o tipo do próximo alerta (ex: transmissão vs. motor) com base nos eventos
+precedentes?
+• O comportamento do operador (identificado de forma anonimizada) tem correlação com a
+frequência de alertas em um mesmo equipamento?
+• Qual é o perfil dos equipamentos que geram mais alertas 'don't go' — frota, tipo e horas
+trabalhadas?
+• Alertas críticos se concentram em determinados turnos, dias da semana ou períodos do mês?
+• Dado o risco previsto de alerta, qual seria a recomendação de ação: continuar operação,
+manutenção preventiva agendada ou parada imediata?
+• Como priorizar a fila de inspeção da manutenção com base no score de risco de cada equipamento?
+• Métrica de sucesso do negócio: definir o que significa 'resolver' o problema. Exemplos: % de alertas
+antecipados, redução de horas de parada não planejada, custo evitado por alerta detectado com
+antecedência.
+• Cenário de aplicação: descrever ao menos um cenário concreto de uso do modelo em operação (ex:
+alerta no sistema de monitoramento do dispatcher com N horas de antecedência).
+2. Entendimento dos Dados (Data Understanding / EDA)
+A Análise Exploratória de Dados (EDA) é a etapa de investigação inicial. O objetivo é desenvolver
+familiaridade profunda com os dados antes de qualquer modelagem: entender distribuições, detectar
+anomalias, identificar padrões e levantar hipóteses.
+Conteúdo Mínimo 2.1 — Carregamento e Inspeção Inicial
+• Carregar todos os datasets disponíveis e apresentar: shape (linhas × colunas), tipos de dados (dtypes),
+contagem de valores nulos por coluna e quantidade de registros duplicados.
+• Distribuição temporal: identificar a janela de datas cobertas pelos dados, frequência média de
+registros por dia/hora e equipamento.
+• Estatísticas descritivas: tabela com min, max, média, mediana e desvio padrão para todas as variáveis
+numéricas.
+Feature Tipo % Nulos Min Max Média Mediana Desvio
+Padrão
+... ... ... ... ... ... ... ...
+... ... ... ... ... ... ... ...
+... ... ... ... ... ... ... ...
+... ... ... ... ... ... ... ...
+... ... ... ... ... ... ... ...
+[ Figura 2: Distribuição temporal dos registros de apontamentos (volume por dia/hora) ]
+Conteúdo Mínimo 2.2 — Análise da Variável Alvo
+• Distribuição dos alertas: após rotular os dados com as regras do Alarmes - SUL_SUDESTE.xlsx,
+apresentar a distribuição de alertas por TIPO, NIVEL e Tag de equipamento.
+• Balanceamento de classes: calcular a proporção de registros com e sem alerta. Classes muito
+desbalanceadas exigem estratégias específicas — documentar a proporção encontrada.
+• Série temporal de alertas: visualizar a frequência de ocorrências de alertas ao longo do tempo (por
+dia, semana ou turno). Identificar sazonalidades ou períodos de concentração.
+[ Figura 3: Distribuição de alertas por tipo e nível de criticidade ]
+[ Figura 4: Série temporal: frequência de alertas ao longo do período analisado ]
+Conteúdo Mínimo 2.3 — Análise de Features
+• Correlações: apresentar heatmap de correlação entre variáveis numéricas. Identificar features com
+alta correlação entre si (potencial multicolinearidade) e com a variável alvo.
+• Distribuição por categoria: analisar a distribuição de alertas por Frota, Tipo de equipamento e Classe
+de atividade. Identificar grupos com maior incidência.
+• Padrões temporais: investigar variações por hora do dia, dia da semana e turno. Alertas concentrados
+em determinados períodos podem indicar padrões operacionais relevantes.
+Nota: Registrar todas as hipóteses levantadas durante a EDA — mesmo as não confirmadas serão úteis para
+interpretar os resultados do modelo.
+[ Figura 5: Heatmap de correlação entre features numéricas ]
+[ Figura 6: Taxa de alertas por hora do dia e dia da semana (heatmap ou barplot) ]
+3. Preparação dos Dados (Data Preparation)
+Dados de telemetria industrial tipicamente apresentam ruídos, inconsistências temporais e necessitam
+de engenharia de features específica para capturar o comportamento sequencial dos equipamentos.
+Esta seção documenta todas as transformações aplicadas.
+Conteúdo Mínimo 3.1 — Limpeza e Tratamento
+• Missing values: justificar a estratégia adotada para cada coluna com dados ausentes (remoção de
+linhas, imputação por mediana/moda, forward-fill para séries temporais, etc.).
+• Inconsistências temporais: verificar e tratar registros onde Inicio > Fim, ciclos com duração nula ou
+negativa, e sobreposições de ciclo para o mesmo equipamento.
+• Outliers: definir critério de identificação (ex: ±3 desvios padrão, IQR) e documentar a decisão:
+remover, imputar ou manter com flag.
+• Controle de alterações: tabela ANTES/DEPOIS listando todos os registros excluídos ou alterados com
+justificativa.
+Campo Problema
+Identificado
+Qtd. Registros Tratamento
+Aplicado
+Justificativa
+... ... ... ... ...
+... ... ... ... ...
+... ... ... ... ...
+... ... ... ... ...
+Conteúdo Mínimo 3.2 — Engenharia de Features
+• Features temporais: extrair da coluna Inicio/Fim — hora do dia, dia da semana, mês, turno
+(manhã/tarde/noite), duração do ciclo em minutos, dias desde o último alerta do mesmo
+equipamento.
+• Rolling windows: para cada equipamento (Tag), calcular agregações nas últimas N horas ou M ciclos
+anteriores: contagem de alertas, duração média de ciclo, frequência de determinadas classes de
+atividade.
+• Encoding categórico: converter Tag, Frota, Tipo, Classe e Operador em representações numéricas —
+justificar a escolha (one-hot, label encoding, target encoding, frequency encoding) com base na
+cardinalidade e no modelo alvo.
+• Features derivadas das regras de negócio: criar features que reflitam a proximidade do estado atual
+do equipamento com as condições de alerta definidas no Alarmes - SUL_SUDESTE.xlsx (ex: contagem
+de pré-condições atendidas nas últimas N horas).
+Nota: Documentar cada feature criada: nome, fórmula de cálculo e motivação. Features não óbvias devem ter a
+hipótese que as motivou explicitada.
+Feature Descrição Fórmula / Lógica Motivação
+... ... ... ...
+... ... ... ...
+... ... ... ...
+... ... ... ...
+... ... ... ...
+... ... ... ...
+Conteúdo Mínimo 3.3 — Definição da Variável Alvo
+• Rotulação via regras de negócio: aplicar as condições do arquivo Alarmes - SUL_SUDESTE.xlsx sobre
+os dados de telemetria para identificar eventos que constituem alertas 'don't go'. Um registro é
+positivo se satisfaz a combinação TIPO + EVENTO + SITUACAO + NIVEL de ao menos uma linha do
+catálogo de regras.
+• Estratégia de construção do target: apresentar e justificar ao menos uma das abordagens:
+• Classificação binária: flag 1/0 indicando se, nas próximas X horas/ciclos do equipamento, ocorrerá
+um alerta crítico.
+• Regressão: valor contínuo representando o tempo (em horas ou ciclos) até o próximo alerta do
+equipamento.
+• Label de anomalia: para abordagens não supervisionadas, usar os alertas como ground truth de
+validação, sem usá-los no treinamento.
+• Janela de predição: justificar a janela de antecipação escolhida (ex: 4 horas, 8 horas, próximo turno)
+com base no contexto operacional e no tempo necessário para ação corretiva.
+[ Figura 7: Diagrama da janela de predição: instante de decisão → janela → evento alvo ]
+4. Modelagem — Mundo Aberto (Modeling)
+Esta seção é intencionalmente aberta. Não existe uma única abordagem correta para este desafio. O
+participante é encorajado a explorar, combinar e criar — o rigor na justificativa das escolhas vale tanto
+quanto a sofisticação técnica.
+Os itens a seguir representam caminhos possíveis, não obrigatórios individualmente. A exigência mínima
+é: documentar ao menos duas abordagens distintas, com baseline definido.
+Conteúdo Mínimo 4.1 — Estratégia de Validação
+• Dimensão temporal: dados de série temporal não devem ser divididos aleatoriamente — o conjunto
+de validação/teste deve ser sempre posterior ao de treino no eixo do tempo (ex: TimeSeriesSplit,
+walk-forward validation, hold-out temporal).
+• Justificativa: explicar por que a validação cruzada k-fold padrão pode introduzir data leakage em
+dados temporais e como a estratégia escolhida evita esse problema.
+• Proporção do split: documentar as proporções utilizadas (ex: 70% treino / 15% validação / 15% teste)
+e as datas de corte.
+[ Figura 8: Diagrama da estratégia de validação temporal (treino / validação / teste) ]
+Conteúdo Mínimo 4.2 — Baseline
+• Modelo de referência: implementar ao menos um modelo simples como referência de comparação.
+Exemplos: regra heurística baseada em frequência histórica de alertas por equipamento, modelo
+dummy (predict majority class), média móvel de alertas.
+• Apresentar as métricas do baseline — qualquer modelo proposto deve superar esta referência para
+ser considerado útil.
+Conteúdo Mínimo 4.3 — Modelagem Principal
+• Explorar e documentar ao menos duas abordagens distintas entre as categorias abaixo (ou outras de
+escolha do participante):
+• Supervisionadas — Classificação: Random Forest, XGBoost, LightGBM, Regressão Logística, SVM,
+Redes Neurais (MLP). Prever se um alerta ocorrerá na janela de predição definida.
+• Supervisionadas — Regressão / Sobrevivência: Gradient Boosting Regressor, modelos de
+sobrevivência (Cox Proportional Hazards, Weibull AFT). Prever o tempo até o próximo alerta.
+• Não Supervisionadas — Clustering: K-Means, DBSCAN, Hierarchical Clustering. Identificar perfis de
+comportamento de equipamentos e associar clusters a maior/menor incidência de alertas.
+• Não Supervisionadas — Detecção de Anomalias: Isolation Forest, One-Class SVM, Autoencoder
+(LSTM ou variacional). Detectar desvios do padrão normal de operação como sinal precursor de
+alerta.
+• Séries Temporais: ARIMA, Prophet, LSTM, Transformer. Modelar a frequência de alertas como série
+temporal e prever períodos de alta incidência.
+• Abordagens Combinadas / Avançadas: Stacking ou blending de modelos heterogêneos, modelos
+generativos para data augmentation de alertas raros (SMOTE, CTGAN), Graph Neural Networks para
+relacionamentos entre equipamentos.
+Para cada abordagem explorada, documentar: escolha de hiperparâmetros e estratégia de tuning (grid
+search, random search, Optuna/Bayesian optimization), decisões de pré-processamento específicas ao
+modelo, e justificativa da escolha da abordagem em relação ao problema.
+Nota: Quantidade não é qualidade. Dois modelos bem justificados e analisados em profundidade valem mais do
+que cinco modelos descritos superficialmente.
+5. Avaliação (Evaluation)
+A avaliação conecta o desempenho técnico dos modelos ao impacto de negócio. Métricas devem ser
+escolhidas em função das consequências reais de cada tipo de erro.
+Conteúdo Mínimo 5.1 — Seleção e Justificativa de Métricas
+• Contexto de desbalanceamento: alertas críticos tendem a ser eventos raros. Accuracy pode ser
+enganosa — priorizar Recall, Precision, F1-Score e AUC-ROC como métricas primárias para problemas
+de classificação.
+• Custo assimétrico dos erros: discutir o impacto operacional de falso negativo (alerta não detectado
+→ parada não planejada) vs. falso positivo (alerta falso → parada desnecessária). Justificar o ponto de
+operação escolhido na curva Precision-Recall.
+• Tabela comparativa de modelos: apresentar tabela com as métricas de todos os modelos avaliados
+no conjunto de validação.
+Modelo Precision Recall F1 AUC-ROC AUC-PR Observações
+... ... ... ... ... ... ...
+... ... ... ... ... ... ...
+... ... ... ... ... ... ...
+... ... ... ... ... ... ...
+... ... ... ... ... ... ...
+[ Figura 9: Curvas ROC e Precision-Recall comparando os modelos avaliados ]
+Conteúdo Mínimo 5.2 — Análise de Erros
+• Matriz de confusão: apresentar e comentar a matriz de confusão do modelo selecionado, traduzindo
+os números em impacto operacional.
+• Casos extremos: analisar os falsos negativos mais críticos — quais equipamentos, frotas ou condições
+o modelo sistematicamente falha em detectar?
+• Degradação temporal: avaliar se a performance do modelo se mantém estável ao longo do tempo ou
+se existe drift nos dados (concept drift, data drift).
+[ Figura 10: Matriz de confusão do modelo selecionado com anotações de impacto operacional ]
+Conteúdo Mínimo 5.3 — Interpretabilidade
+• Importância de features: apresentar o ranking de importância das variáveis utilizando SHAP values,
+permutation importance ou equivalente para o modelo escolhido.
+• Validação de sentido: discutir se as features mais importantes fazem sentido do ponto de vista
+operacional. Features que o modelo considera importantes mas que não têm explicação operacional
+devem ser investigadas.
+• SHAP plots: para modelos complexos (ensemble, redes neurais), incluir summary plot e ao menos um
+example plot mostrando a contribuição de cada feature para uma predição específica.
+[ Figura 11: SHAP summary plot — importância e direção de cada feature ]
+[ Figura 12: SHAP waterfall plot — decomposição de uma predição individual ]
+6. Resultados, Conclusão e Trabalhos Futuros
+Conteúdo Mínimo 6.1 — Resultados e Discussão
+• Comparação com baseline: apresentar a melhoria de performance do melhor modelo em relação ao
+baseline definido na seção 4.2. A melhoria deve ser quantificada.
+• Tradução para impacto de negócio: converter métricas técnicas em impacto estimado. Exemplos:
+'Com Recall de X%, o modelo teria antecipado Y% dos alertas críticos no período analisado,
+representando Z horas de parada evitada.'
+• Insights não óbvios: destacar descobertas inesperadas ou contra-intuitivas encontradas durante a
+análise — estes são frequentemente os achados mais valiosos.
+[ Figura 13: Comparação visual de performance: baseline vs. modelos desenvolvidos ]
+Conteúdo Mínimo 6.2 — Conclusão
+• Resposta à pergunta analítica: retomar a pergunta formulada em CM 1.2 e respondê-la
+objetivamente com base nos resultados obtidos.
+• Limitações: ser honesto sobre as limitações da abordagem — volume de dados, janela temporal
+coberta, features não disponíveis, generalização para outras regiões ou frotas.
+Conteúdo Mínimo 6.3 — Trabalhos Futuros
+• Propor ao menos três extensões concretas e justificadas. Exemplos de categorias:
+• Novos dados: integração de dados de manutenção preventiva, condições climáticas, histórico de
+falhas mecânicas.
+• Novas features: variáveis derivadas de sensores de telemetria em tempo real, features de
+comportamento do operador.
+• Abordagens alternativas: modelos online (incremental learning) para adaptar-se a drift,
+reinforcement learning para política de manutenção.
+• Integração operacional: arquitetura de deploy do modelo no sistema de monitoramento da frota,
+pipeline de retraining automático.
+Referências e Recursos
+• Alarmes - SUL_SUDESTE.xlsx — Catálogo de regras de negócio para alertas 'don't go' (pasta
+business/).
+• Dicionario_Dados.xlsx — Descrição das features da tabela Apontamentos.
+• Desenvolver_Template.docx — Template de relatório final do desafio.
+• Kaggle Learn — Introdução a Machine Learning, Feature Engineering e Explainability
+(kaggle.com/learn).
+• SHAP documentation — shap.readthedocs.io
+• scikit-learn documentation — scikit-learn.org
+• Lifelines (modelos de sobrevivência) — lifelines.readthedocs.io
