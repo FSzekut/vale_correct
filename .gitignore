@@ -21,6 +21,7 @@ catboost_info/
 
 .ipynb_checkpoints/
 .jupyter/
+notebooks/.tmp/
 
 build/
 dist/
