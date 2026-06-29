@@ -1502,3 +1502,104 @@ Decisão:
   das premissas econômicas externas e da taxa empírica `Dont Go -> Manutenção` observada;
 - próximo passo técnico: auditoria de interpretabilidade/explicabilidade do CatBoost e teste de
   robustez por thresholds fixos antes de empacotar o modelo principal.
+
+## 30. Threshold explícito, curva de decisão e robustez
+
+O notebook `18_Threshold_Robustez_Curva_Decisao.ipynb` foi criado por
+`scripts/create_threshold_robustness_notebook.py` e executado integralmente sem erros.
+
+Objetivo:
+
+- auditar controle explícito de threshold para a referência e para os candidatos calibrados;
+- medir se o valor econômico depende de um threshold pontual ou de uma faixa robusta;
+- testar sensibilidade a premissas econômicas;
+- avaliar se já há evidência para separar modelos de caminhões e escavadeiras.
+
+Controle:
+
+- mesmos splits temporais do notebook 17;
+- mesmos algoritmos: RandomForest, XGBoost, LightGBM e CatBoost;
+- calibração sigmoide;
+- grid explícito de thresholds de 0,01 a 0,99;
+- faixa robusta definida como thresholds com pelo menos 95% do melhor valor médio do modelo e valor
+  positivo em todos os splits de teste.
+
+### Confirmação dos algoritmos testados
+
+Foram testados:
+
+- RandomForest;
+- XGBoost;
+- LightGBM;
+- CatBoost.
+
+O melhor valor médio continuou com `multijanela_core_ids_textual + CatBoost`, mas XGBoost permaneceu
+relevante como sensibilidade e venceu splits específicos.
+
+### Faixas robustas de threshold
+
+| Modelo | Thresholds robustos | Faixa robusta | Valor médio mínimo | Valor médio máximo | Pior split mínimo | Precisão média mínima | Recall médio |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| Referência + RandomForest | 4 | 0,415-0,430 | 2.221.133 | 2.305.100 | 1.302.000 | 0,453 | 0,211-0,221 |
+| Multijanela + CatBoost | 12 | 0,410-0,490 | 2.693.067 | 2.811.367 | 2.190.500 | 0,469 | 0,190-0,257 |
+| Multijanela + XGBoost | 14 | 0,380-0,445 | 2.339.300 | 2.425.400 | 1.729.200 | 0,443 | 0,203-0,257 |
+
+Leitura:
+
+- o CatBoost multijanela não depende de um threshold único estreito;
+- a referência RandomForest também é positiva, mas possui faixa robusta menor e valor médio inferior;
+- XGBoost tem faixa robusta ampla e deve seguir como candidato de sensibilidade, embora a média base
+  ainda fique abaixo do CatBoost;
+- o threshold econômico robusto implica recall menor do que o threshold técnico por F2. Isso é uma
+  escolha operacional explícita: menos alertas, maior precisão e maior valor simulado.
+
+### Sensibilidade econômica
+
+Valores médios por cenário, usando o threshold robusto de melhor média de cada modelo:
+
+| Cenário | CatBoost multijanela | XGBoost multijanela | Referência RF |
+|---|---:|---:|---:|
+| Alto impacto | 3.292.688 | 2.844.125 | 2.696.812 |
+| Alto `p_acao_confirmada` | 3.833.822 | 3.278.210 | 3.263.365 |
+| Baixo `p` e baixo impacto | 899.826 | 813.756 | 572.957 |
+| Base | 2.811.367 | 2.425.400 | 2.305.100 |
+| Conservador duro | 435.326 | 429.756 | 109.957 |
+| Intervenção mais cara | 2.346.867 | 2.041.400 | 1.842.100 |
+
+Leitura:
+
+- CatBoost multijanela vence em todos os cenários médios testados;
+- sob cenário conservador duro, todos os valores caem muito, mas CatBoost e XGBoost ainda ficam
+  positivos na média;
+- a referência RF fica positiva na média, mas seu pior split no cenário conservador duro fica negativo;
+- isso reforça que a decisão econômica depende das premissas de custo e não deve ser chamada de ROI
+  observado.
+
+### Separação caminhões vs escavadeiras
+
+Volume mensal do target:
+
+| Tipo | Tags | Positivos por mês |
+|---|---:|---:|
+| Caminhão | 30 | 280 a 560 |
+| Escavadeira | 5 | 1 a 7 |
+
+No recorte de teste com thresholds robustos:
+
+- os valores positivos dos modelos vêm essencialmente de caminhões;
+- escavadeiras tiveram poucos positivos e quase nenhum alerta útil;
+- no CatBoost multijanela, abril teve 1 alerta em escavadeira, falso positivo, gerando valor negativo
+  de -225.000 no recorte; maio e junho não tiveram alertas em escavadeiras.
+
+Decisão:
+
+- faz sentido tratar caminhões como foco operacional e, no próximo ciclo, testar um modelo treinado
+  apenas em caminhões;
+- ainda não há base estatística suficiente para treinar um modelo separado de escavadeiras com este
+  target;
+- para escavadeiras, a ação correta é buscar target/dado operacional mais forte ou acumular mais
+  histórico antes de modelagem própria;
+- candidato principal permanece `multijanela_core_ids_textual + CatBoost + calibração sigmoide`, com
+  threshold operacional candidato na faixa 0,410-0,490;
+- baseline auditável permanece `referencia_24h_ids_textual + RandomForest`, com threshold candidato
+  na faixa 0,415-0,430.

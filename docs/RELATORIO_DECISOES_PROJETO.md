@@ -525,3 +525,38 @@ Decisão:
   `Is_Dont_Go` são raros e o melhor candidato concentrou valor em caminhões;
 - a próxima etapa deve auditar explicabilidade, estabilidade de threshold e robustez antes de chamar
   o candidato de modelo principal.
+
+## 20. Threshold explícito e robustez
+
+O notebook `18_Threshold_Robustez_Curva_Decisao.ipynb` auditou a curva de decisão dos candidatos em
+um grid explícito de thresholds de 0,01 a 0,99.
+
+Definição usada:
+
+- threshold robusto = pelo menos 95% do melhor valor médio do modelo e valor positivo em todos os
+  splits de teste.
+
+Faixas robustas:
+
+| Modelo | Thresholds robustos | Faixa | Valor médio máximo | Pior split mínimo |
+|---|---:|---:|---:|---:|
+| Referência + RandomForest | 4 | 0,415-0,430 | 2.305.100 | 1.302.000 |
+| Multijanela + CatBoost | 12 | 0,410-0,490 | 2.811.367 | 2.190.500 |
+| Multijanela + XGBoost | 14 | 0,380-0,445 | 2.425.400 | 1.729.200 |
+
+Sensibilidade econômica:
+
+- CatBoost multijanela venceu todos os cenários médios testados;
+- XGBoost multijanela ficou próximo em cenários conservadores e segue como candidato de
+  sensibilidade;
+- referência RF continua positiva e auditável, mas inferior ao CatBoost na média e menos robusta em
+  cenários conservadores.
+
+Decisão:
+
+- manter `multijanela_core_ids_textual + CatBoost + calibração sigmoide` como candidato principal;
+- usar faixa operacional candidata de threshold `0,410-0,490`;
+- manter `referencia_24h_ids_textual + RandomForest` como baseline, faixa `0,415-0,430`;
+- testar no próximo ciclo um modelo treinado apenas em caminhões;
+- não treinar modelo separado de escavadeiras ainda, pois o volume mensal de positivos fica entre 1 e
+  7 eventos, insuficiente para uma avaliação confiável.
