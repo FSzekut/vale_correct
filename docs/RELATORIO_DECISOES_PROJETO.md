@@ -482,3 +482,46 @@ Decisão:
 - baseline técnico principal segue sendo a referência agregada até comparação de algoritmos e
   estabilidade temporal final;
 - os valores econômicos seguem simulação, não ROI observado.
+
+## 19. Comparação de algoritmos calibrados
+
+O notebook `17_Comparacao_Algoritmos_Calibrados.ipynb` comparou RandomForest, XGBoost, LightGBM e
+CatBoost em três splits temporais, sempre com calibração sigmoide e threshold econômico escolhido
+antes do mês de teste.
+
+Splits:
+
+| Split | Treino | Calibração | Threshold | Teste |
+|---|---|---|---|---|
+| S1 | Jan/2025 | Fev/2025 | Mar/2025 | Abr/2025 |
+| S2 | Jan-Fev/2025 | Mar/2025 | Abr/2025 | Mai/2025 |
+| S3 | Jan-Mar/2025 | Abr/2025 | Mai/2025 | Jun/2025 |
+
+Vencedores por split:
+
+| Split | Melhor combinação | Valor incremental | Precisão | Recall |
+|---|---|---:|---:|---:|
+| S1 | Referência + RandomForest | 3.005.700 | 0,413 | 0,332 |
+| S2 | Multijanela + CatBoost | 1.652.600 | 0,398 | 0,272 |
+| S3 | Multijanela + XGBoost | 3.820.200 | 0,467 | 0,372 |
+
+Ranking médio por valor incremental:
+
+| Ranking | Combinação | Valor médio | Valor mínimo | Valor máximo | Precisão média | Recall médio |
+|---:|---|---:|---:|---:|---:|---:|
+| 1 | Multijanela + CatBoost | 2.379.933 | 1.652.600 | 3.319.800 | 0,415 | 0,312 |
+| 2 | Multijanela + RandomForest | 2.165.200 | 1.569.200 | 2.742.700 | 0,420 | 0,280 |
+| 3 | Referência + CatBoost | 2.158.100 | 861.100 | 2.894.300 | 0,412 | 0,296 |
+| 4 | Multijanela + XGBoost | 1.955.167 | 608.000 | 3.820.200 | 0,406 | 0,287 |
+
+Decisão:
+
+- `multijanela_core_ids_textual + CatBoost + calibração sigmoide` passa a ser o candidato principal
+  econômico;
+- `referencia_24h_ids_textual + RandomForest` permanece como baseline simples e competitivo;
+- XGBoost não deve ser descartado, pois venceu junho, mas a média e o mínimo foram inferiores ao
+  CatBoost;
+- não há suporte operacional robusto para escavadeiras nesta formulação, pois os eventos
+  `Is_Dont_Go` são raros e o melhor candidato concentrou valor em caminhões;
+- a próxima etapa deve auditar explicabilidade, estabilidade de threshold e robustez antes de chamar
+  o candidato de modelo principal.

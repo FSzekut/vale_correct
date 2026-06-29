@@ -1421,3 +1421,84 @@ Decisão:
   aqui;
 - antes de chamar de modelo principal, falta comparar algoritmos sobre esta base calibrada e confirmar
   estabilidade temporal.
+
+## 29. Comparação de algoritmos calibrados
+
+O notebook `17_Comparacao_Algoritmos_Calibrados.ipynb` foi criado por
+`scripts/create_algorithm_comparison_notebook.py` e executado integralmente sem erros.
+
+Objetivo:
+
+- comparar RandomForest, XGBoost, LightGBM e CatBoost sob o mesmo desenho temporal;
+- avaliar os dois conjuntos de features candidatos:
+  - `referencia_24h_ids_textual`;
+  - `multijanela_core_ids_textual`;
+- aplicar calibração sigmoide antes da escolha do threshold econômico;
+- medir estabilidade em múltiplos splits temporais.
+
+Desenho temporal:
+
+| Split | Treino | Calibração | Threshold | Teste |
+|---|---|---|---|---|
+| S1 | Jan/2025 | Fev/2025 | Mar/2025 | Abr/2025 |
+| S2 | Jan-Fev/2025 | Mar/2025 | Abr/2025 | Mai/2025 |
+| S3 | Jan-Mar/2025 | Abr/2025 | Mai/2025 | Jun/2025 |
+
+Controles de auditoria:
+
+- vocabulário de alarmes/texto selecionado apenas em janeiro para reduzir risco de vazamento;
+- limpeza analítica igual aos notebooks anteriores;
+- episódios com lacuna global de `2025-05-31` invalidados quando a janela atravessa o buraco;
+- threshold escolhido no período anterior ao teste;
+- resultado final sempre reportado no mês de teste não usado para seleção daquele split.
+
+### Vencedores por split
+
+| Split | Teste | Melhor combinação | Valor incremental | Precisão | Recall | TP | FP | FN |
+|---|---|---|---:|---:|---:|---:|---:|---:|
+| S1 | Abr/2025 | Referência + RandomForest | 3.005.700 | 0,413 | 0,332 | 121 | 172 | 243 |
+| S2 | Mai/2025 | Multijanela + CatBoost | 1.652.600 | 0,398 | 0,272 | 78 | 118 | 209 |
+| S3 | Jun/2025 | Multijanela + XGBoost | 3.820.200 | 0,467 | 0,372 | 106 | 121 | 179 |
+
+Leitura:
+
+- nenhum algoritmo venceu todos os splits;
+- o resultado por mês é instável, o que impede declarar um único vencedor absoluto sem ressalva;
+- a multijanela core passou a ser mais forte quando combinada com algoritmos de boosting;
+- XGBoost venceu junho, RandomForest venceu abril e CatBoost venceu maio.
+
+### Média dos splits
+
+Ranking por valor incremental médio:
+
+| Ranking | Combinação | Valor médio | Valor mediano | Valor mínimo | Valor máximo | Precisão média | Recall médio | PR-AUC média | Brier médio |
+|---:|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| 1 | Multijanela + CatBoost | 2.379.933 | 2.167.400 | 1.652.600 | 3.319.800 | 0,415 | 0,312 | 0,332 | 0,0795 |
+| 2 | Multijanela + RandomForest | 2.165.200 | 2.183.700 | 1.569.200 | 2.742.700 | 0,420 | 0,280 | 0,324 | 0,0794 |
+| 3 | Referência + CatBoost | 2.158.100 | 2.718.900 | 861.100 | 2.894.300 | 0,412 | 0,296 | 0,332 | 0,0803 |
+| 4 | Multijanela + XGBoost | 1.955.167 | 1.437.300 | 608.000 | 3.820.200 | 0,406 | 0,287 | 0,320 | 0,0810 |
+
+Resultado operacional por tipo para a melhor média (`multijanela_core_ids_textual + CatBoost`):
+
+| Split | Tipo | TP | FP | FN | Valor incremental |
+|---|---|---:|---:|---:|---:|
+| S1 | Caminhao 793-D 2S/3S/4S/5S | 122 | 195 | 241 | 2.167.400 |
+| S2 | Caminhao 793-D 2S/3S/4S/5S | 78 | 118 | 202 | 1.652.600 |
+| S3 | Caminhao 793-D 2S/3S/4S/5S | 94 | 109 | 189 | 3.319.800 |
+
+Escavadeiras:
+
+- a melhor combinação média não gerou predições úteis para escavadeiras;
+- isso é coerente com a baixa quantidade de episódios `Is_Dont_Go` nesse tipo;
+- escavadeiras continuam fora de uma recomendação operacional robusta com os dados atuais.
+
+Decisão:
+
+- adotar `multijanela_core_ids_textual + CatBoost + calibração sigmoide` como candidato principal
+  econômico para o próximo ciclo;
+- manter `referencia_24h_ids_textual + RandomForest` como baseline forte e simples;
+- manter XGBoost como candidato de sensibilidade, pois venceu junho mas foi menos estável na média;
+- não transformar o ranking em conclusão definitiva de ROI, pois o valor incremental ainda depende
+  das premissas econômicas externas e da taxa empírica `Dont Go -> Manutenção` observada;
+- próximo passo técnico: auditoria de interpretabilidade/explicabilidade do CatBoost e teste de
+  robustez por thresholds fixos antes de empacotar o modelo principal.
