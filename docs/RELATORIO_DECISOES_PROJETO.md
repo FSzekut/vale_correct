@@ -346,8 +346,8 @@ Decisão:
 
 Ordem atual:
 
-1. testar controle explícito de threshold/curva de decisão para referência agregada e multijanela
-   core;
+1. buscar dados reais ou premissas aprovadas de custo e, principalmente, uma ligação observável entre
+   alerta, intervenção, parada ou manutenção;
 2. manter escavadeiras, tags com FP alto e falsos negativos de baixa probabilidade como recortes
    obrigatórios de auditoria;
 3. depois comparar novos algoritmos;
@@ -366,3 +366,119 @@ Notebook executado:
 - `13_Teste_Multijanelas_Temporais.ipynb`;
 - conclusão consolidada: multijanelas são úteis para recall, mas ainda não substituem a referência
   agregada sem uma função de custo.
+
+## 16. Threshold e cenários de custo
+
+O notebook `14_Threshold_Curva_Decisao_Custo.ipynb` comparou a referência agregada contra a
+`multijanela_core_ids_textual` com curva explícita de thresholds e uma camada econômica de
+sensibilidade.
+
+Limite:
+
+- os custos usados são premissas externas, não valores observados no projeto;
+- `p_acao_confirmada` foi incluído porque `Is_Dont_Go` não é falha confirmada;
+- a análise econômica não é ROI.
+
+Resultado técnico no teste, com threshold escolhido por F2 na validação:
+
+| Cenário | Threshold | PR-AUC | Precisão | Recall | F2 | TP | FP | FN |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| Referência agregada 24h | 0,185 | 0,333 | 0,230 | 0,789 | 0,531 | 225 | 753 | 60 |
+| Multijanela core | 0,145 | 0,362 | 0,200 | 0,846 | 0,514 | 241 | 965 | 44 |
+
+Decisão técnica:
+
+- manter a referência agregada como baseline principal;
+- a multijanela core recupera 16 positivos adicionais, mas adiciona 212 falsos positivos;
+- a multijanela core continua candidata apenas para cenário de alto custo operacional/alto recall.
+
+Resultado econômico:
+
+- as premissas externas com fonte estão documentadas em `docs/PREMISSAS_ECONOMICAS_EXTERNAS.md`;
+- após o notebook 15, o cenário base passou a usar `p_acao_confirmada = 0,655` para caminhões, derivado
+  do treino pela taxa `Dont Go -> Manutenção em 8h`;
+- com essa premissa empírica, a otimização econômica escolheu threshold 0,445 para a referência
+  agregada e 0,425 para a multijanela core;
+- no teste, o valor incremental simulado foi 1.942.800 para a referência e 2.096.000 para a
+  multijanela core;
+- os thresholds técnicos de F2 continuam economicamente ruins por excesso de falsos positivos;
+- em cenários de sensibilidade mais agressivos, com maior impacto operacional e maior
+  `p_acao_confirmada`, a multijanela core passou a vencer.
+
+Conclusão:
+
+O projeto agora tem uma ligação observável entre `Is_Dont_Go` e `Manutenção` em caminhões, suficiente
+para uma simulação econômica melhor que a premissa externa de 20%. Ainda não é ROI observado: faltam
+custo real, causalidade operacional e separação entre manutenção preventiva, corretiva e rotina.
+
+## 17. Validação operacional do target
+
+O notebook `15_Validacao_Operacional_Target.ipynb` mediu a relação entre episódios `Is_Dont_Go` e
+apontamentos `Manutenção`.
+
+Limites:
+
+- `Manutenção` é proxy de intervenção, não causalidade;
+- janelas que atravessam `2025-05-31` foram invalidadas;
+- o período completo aparece apenas como descrição retrospectiva.
+
+Achados principais:
+
+- foram encontrados 33.981 apontamentos `Manutenção`;
+- a mediana de duração de `Manutenção` é 1,0h em caminhões e escavadeiras, nos três splits;
+- em caminhões, episódios `Is_Dont_Go` seguidos por manutenção em até 8h tiveram taxa:
+  - treino: 0,655;
+  - validação: 0,788;
+  - teste: 0,751;
+- no sentido inverso, apenas parte das manutenções é precedida por `Is_Dont_Go` em até 8h:
+  - caminhões treino: 0,189;
+  - caminhões validação: 0,156;
+  - caminhões teste: 0,151;
+- escavadeiras têm poucos episódios `Is_Dont_Go`, então as taxas `Dont Go -> Manutenção` são
+  instáveis, e a cobertura `Manutenção -> Dont Go anterior` fica abaixo de 3% em 8h.
+
+Decisão:
+
+- existe associação operacional mensurável entre `Is_Dont_Go` e manutenção posterior em caminhões;
+- `Is_Dont_Go` não é target geral de manutenção, pois cobre parcela pequena das manutenções totais;
+- usar `Dont Go -> Manutenção em 8h` como primeira estimativa empírica de `p_acao_confirmada` para
+  caminhões em cenários econômicos;
+- não usar essa taxa para escavadeiras sem mais dados;
+- manter a janela 8h como candidata porque é coerente com o horizonte atual do modelo e foi razoável
+  em validação e teste.
+
+## 18. Calibração de probabilidades
+
+O notebook `16_Calibracao_Probabilidades.ipynb` avaliou calibração para a referência agregada e a
+multijanela core.
+
+Desenho:
+
+- treino do modelo base: janeiro-março;
+- calibração: abril;
+- threshold: maio;
+- teste final: junho.
+
+Achado de calibração:
+
+- os scores brutos superestimavam a prevalência no teste;
+- calibração reduziu Brier/ECE;
+- melhor Brier no teste:
+  - multijanela core isotônica: Brier 0,0715, ECE 0,0135;
+  - referência sigmoide: Brier 0,0732, ECE 0,0174.
+
+Resultado econômico no teste, com threshold escolhido na validação:
+
+| Cenário | Calibração | Threshold | Valor incremental | Precisão | Recall | TP | FP | FN |
+|---|---|---:|---:|---:|---:|---:|---:|---:|
+| Multijanela core | Sigmoide | 0,310 | 2.454.300 | 0,441 | 0,277 | 79 | 100 | 206 |
+| Multijanela core | Isotônica | 0,315 | 2.379.400 | 0,432 | 0,288 | 82 | 108 | 203 |
+| Referência agregada | Sigmoide | 0,405 | 2.298.600 | 0,487 | 0,204 | 58 | 61 | 227 |
+
+Decisão:
+
+- calibração é necessária se o score for usado para decisão econômica;
+- melhor candidato econômico até aqui: `multijanela_core_ids_textual` com calibração sigmoide;
+- baseline técnico principal segue sendo a referência agregada até comparação de algoritmos e
+  estabilidade temporal final;
+- os valores econômicos seguem simulação, não ROI observado.
