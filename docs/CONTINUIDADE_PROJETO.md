@@ -1603,3 +1603,93 @@ Decisão:
   threshold operacional candidato na faixa 0,410-0,490;
 - baseline auditável permanece `referencia_24h_ids_textual + RandomForest`, com threshold candidato
   na faixa 0,415-0,430.
+
+## 31. Modelos por tipo de equipamento
+
+O notebook `19_Modelos_Por_Tipo_Equipamento.ipynb` foi criado por
+`scripts/create_type_specific_models_notebook.py` e executado integralmente sem erros.
+
+Objetivo:
+
+- comparar o modelo misto atual contra modelos treinados apenas em caminhões;
+- treinar modelos de escavadeira apenas como parâmetro de referência;
+- documentar explicitamente a confiança baixa para escavadeiras por escassez de dados.
+
+Controles:
+
+- mesmos splits temporais dos notebooks 17 e 18;
+- mesmo target, limpeza, gap 900s, observação 24h e horizonte 8h;
+- calibração sigmoide;
+- vocabulário selecionado apenas em janeiro;
+- escavadeiras avaliadas como experimento, não como candidato operacional.
+
+### Resultado com threshold escolhido na validação
+
+| Escopo | Modelo | Valor médio | Valor mínimo | Valor máximo | Precisão média | Recall médio | PR-AUC médio |
+|---|---|---:|---:|---:|---:|---:|---:|
+| Misto | Multijanela + CatBoost | 2.379.933 | 1.652.600 | 3.319.800 | 0,415 | 0,312 | 0,332 |
+| Caminhões | Multijanela + CatBoost | 2.232.133 | 1.219.300 | 3.186.200 | 0,421 | 0,311 | 0,337 |
+| Misto | Referência + RandomForest | 1.768.900 | 1.113.900 | 3.005.700 | 0,394 | 0,262 | 0,300 |
+| Caminhões | Referência + RandomForest | 1.765.500 | 685.800 | 2.668.700 | 0,404 | 0,261 | 0,305 |
+| Caminhões | Multijanela + XGBoost | 1.538.233 | -601.100 | 3.566.600 | 0,395 | 0,313 | 0,327 |
+| Escavadeiras | Referência + RandomForest | 0 | 0 | 0 | 0 | 0 | 0,015 |
+| Escavadeiras | Multijanela + CatBoost | 0 | 0 | 0 | 0 | 0 | 0,015 |
+
+Leitura:
+
+- pelo threshold escolhido na validação, o modelo misto `multijanela + CatBoost` ainda tem maior valor
+  médio que o caminhão-only;
+- caminhão-only `multijanela + CatBoost` fica muito próximo, com PR-AUC médio ligeiramente maior, mas
+  pior valor mínimo;
+- XGBoost caminhão-only venceu junho, mas teve valor negativo em abril, então não é estável o
+  suficiente para substituir o CatBoost;
+- modelos de escavadeira escolheram threshold 0,990 e não emitiram alertas no teste; isso gera valor
+  zero, não evidência de bom modelo.
+
+### Curva explícita de threshold
+
+Faixas robustas, usando a definição do notebook 18:
+
+| Escopo/modelo | Thresholds robustos | Faixa robusta | Valor médio máximo | Pior split mínimo | Precisão média mínima | Recall médio |
+|---|---:|---:|---:|---:|---:|---:|
+| Caminhões + CatBoost multijanela | 10 | 0,390-0,440 | 2.990.200 | 2.287.500 | 0,464 | 0,229-0,272 |
+| Caminhões + XGBoost multijanela | 13 | 0,360-0,480 | 2.316.467 | 1.381.100 | 0,425 | 0,178-0,280 |
+| Caminhões + RandomForest referência | 3 | 0,380-0,390 | 2.255.733 | 1.360.700 | 0,438 | 0,230-0,236 |
+| Misto + CatBoost multijanela | 7 | 0,420-0,480 | 2.780.567 | 1.302.000 | 0,456 | 0,203-0,257 |
+| Misto + RandomForest referência | 10 | 0,395-0,450 | 2.327.800 | 1.308.800 | 0,441 | 0,195-0,226 |
+
+Leitura:
+
+- quando a política de threshold é analisada explicitamente, o caminhão-only CatBoost tem melhor valor
+  médio máximo e pior split mínimo que o CatBoost misto;
+- isso sugere que o modelo focado em caminhões é mais interessante para uma política operacional
+  dedicada, desde que o threshold seja escolhido dentro da faixa robusta;
+- a diferença entre "threshold escolhido por validação" e "curva explícita de threshold" deve ser
+  mantida no relatório final.
+
+### Escavadeiras
+
+Volume mensal observado:
+
+| Tipo | Tags | Positivos por mês |
+|---|---:|---:|
+| Caminhão | 30 | 280 a 560 |
+| Escavadeira | 5 | 1, 6, 1, 1, 7, 2 no período mensal auditado |
+
+Conclusão obrigatória para relatório final:
+
+- os modelos de escavadeira foram treinados apenas como parâmetro;
+- a quantidade de positivos por mês é insuficiente para confiar em métrica de classificação ou curva
+  econômica;
+- o resultado de valor zero decorre de não emitir alertas, não de capacidade preditiva;
+- qualquer uso operacional em escavadeiras exigiria mais histórico, target mais forte ou outra
+  formulação.
+
+Decisão:
+
+- manter o CatBoost multijanela misto como melhor resultado médio por threshold escolhido na validação;
+- registrar caminhão-only CatBoost como candidato operacional preferível para uma política de
+  threshold fixo, pois teve faixa robusta superior;
+- não usar modelos de escavadeira como recomendação operacional;
+- próximo passo: explicar CatBoost caminhão-only e CatBoost misto lado a lado, depois escolher a
+  política final de threshold.

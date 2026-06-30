@@ -560,3 +560,42 @@ Decisão:
 - testar no próximo ciclo um modelo treinado apenas em caminhões;
 - não treinar modelo separado de escavadeiras ainda, pois o volume mensal de positivos fica entre 1 e
   7 eventos, insuficiente para uma avaliação confiável.
+
+## 21. Modelos por tipo de equipamento
+
+O notebook `19_Modelos_Por_Tipo_Equipamento.ipynb` comparou modelos mistos, modelos treinados apenas
+em caminhões e modelos de escavadeira usados apenas como parâmetro.
+
+Resultado com threshold escolhido na validação:
+
+| Escopo | Modelo | Valor médio | Valor mínimo | Valor máximo | Precisão média | Recall médio |
+|---|---|---:|---:|---:|---:|---:|
+| Misto | Multijanela + CatBoost | 2.379.933 | 1.652.600 | 3.319.800 | 0,415 | 0,312 |
+| Caminhões | Multijanela + CatBoost | 2.232.133 | 1.219.300 | 3.186.200 | 0,421 | 0,311 |
+| Misto | Referência + RandomForest | 1.768.900 | 1.113.900 | 3.005.700 | 0,394 | 0,262 |
+| Caminhões | Referência + RandomForest | 1.765.500 | 685.800 | 2.668.700 | 0,404 | 0,261 |
+| Caminhões | Multijanela + XGBoost | 1.538.233 | -601.100 | 3.566.600 | 0,395 | 0,313 |
+| Escavadeiras | Referência + RandomForest | 0 | 0 | 0 | 0 | 0 |
+| Escavadeiras | Multijanela + CatBoost | 0 | 0 | 0 | 0 | 0 |
+
+Curva explícita de threshold:
+
+| Escopo/modelo | Faixa robusta | Valor médio máximo | Pior split mínimo |
+|---|---:|---:|---:|
+| Caminhões + CatBoost multijanela | 0,390-0,440 | 2.990.200 | 2.287.500 |
+| Caminhões + XGBoost multijanela | 0,360-0,480 | 2.316.467 | 1.381.100 |
+| Caminhões + RandomForest referência | 0,380-0,390 | 2.255.733 | 1.360.700 |
+| Misto + CatBoost multijanela | 0,420-0,480 | 2.780.567 | 1.302.000 |
+| Misto + RandomForest referência | 0,395-0,450 | 2.327.800 | 1.308.800 |
+
+Decisão:
+
+- o modelo misto CatBoost ainda tem o melhor valor médio quando o threshold é escolhido somente pela
+  validação de cada split;
+- o modelo caminhão-only CatBoost tem a melhor curva robusta de threshold e maior pior split mínimo,
+  portanto é o melhor candidato para uma política operacional dedicada a caminhões;
+- XGBoost caminhão-only continua como sensibilidade, mas teve split negativo;
+- modelos de escavadeira não são confiáveis com este target: os positivos mensais foram `[7, 6, 1, 1,
+  7, 2]`, e os modelos acabaram sem alertas no teste;
+- o relatório final deve afirmar explicitamente que escavadeiras precisam de mais histórico, target
+  mais forte ou outra formulação antes de qualquer uso operacional.
