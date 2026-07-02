@@ -307,6 +307,15 @@ No baseline foi aprovado um limite inicial de 60 segundos:
 O dia não é preenchido com zeros. Zero significaria equipamento observado sem alarmes, mas o que
 existe é ausência de observação.
 
+Pesquisa externa realizada em 02/07/2026:
+
+- foram buscadas notícias, comunicados públicos e eventos setoriais associados a `31/05/2025`,
+  incluindo Vale, mineração, paralisação, apagão, barragens, Carajás e interrupções operacionais;
+- não foi encontrado fato público que sustente associar a lacuna a uma parada geral da Vale, da mina,
+  do setor de mineração ou do sistema elétrico brasileiro;
+- a hipótese documentada permanece sendo lacuna global de observação/ingestão da telemetria, não
+  parada operacional confirmada.
+
 No baseline:
 
 - foram usadas fronteiras de 8 horas em `00:00`, `08:00` e `16:00`;
@@ -1693,3 +1702,176 @@ Decisão:
 - não usar modelos de escavadeira como recomendação operacional;
 - próximo passo: explicar CatBoost caminhão-only e CatBoost misto lado a lado, depois escolher a
   política final de threshold.
+
+## 32. Explicabilidade e política final
+
+O notebook `20_Explicabilidade_E_Politica_Final.ipynb` foi criado por
+`scripts/create_explainability_final_policy_notebook.py` e executado integralmente sem erros.
+
+Objetivo:
+
+- explicar lado a lado `multijanela_core_ids_textual + CatBoost` misto e caminhão-only;
+- comparar esses candidatos contra as referências RandomForest;
+- auditar curva robusta de threshold, sensibilidade econômica, recortes por tipo e explicabilidade
+  global/local;
+- preservar escavadeiras como recorte de baixa confiança, não como recomendação operacional.
+
+Controle:
+
+- mesma limpeza analítica dos notebooks anteriores;
+- `gap=900s`, observação 24h, horizonte 8h;
+- vocabulário conservador selecionado apenas em janeiro;
+- três splits temporais rolantes;
+- calibração sigmoide;
+- custos econômicos continuam premissas de cenário, não ROI observado.
+
+Base reproduzida:
+
+- 35.608.094 registros analíticos;
+- 265.564 duplicatas exatas retiradas na camada analítica;
+- 979.994 sequências;
+- 7.572 sequências `Dont Go`;
+- features: 416 na referência agregada e 441 na multijanela core.
+
+Resultado com threshold escolhido na validação:
+
+| Escopo | Modelo | Valor médio | Valor mínimo | Valor máximo | Precisão média | Recall médio |
+|---|---|---:|---:|---:|---:|---:|
+| Misto | Multijanela + CatBoost | 2.379.933 | 1.652.600 | 3.319.800 | 0,415 | 0,312 |
+| Caminhões | Multijanela + CatBoost | 2.232.133 | 1.219.300 | 3.186.200 | 0,421 | 0,311 |
+| Misto | Referência + RandomForest | 1.768.900 | 1.113.900 | 3.005.700 | 0,394 | 0,262 |
+| Caminhões | Referência + RandomForest | 1.765.500 | 685.800 | 2.668.700 | 0,404 | 0,261 |
+| Caminhões | Multijanela + XGBoost | 1.538.233 | -601.100 | 3.566.600 | 0,395 | 0,313 |
+| Escavadeiras | Referência + RandomForest | 0 | 0 | 0 | 0 | 0 |
+| Escavadeiras | Multijanela + CatBoost | 0 | 0 | 0 | 0 | 0 |
+
+Curva robusta de threshold:
+
+| Modelo | Faixa robusta | Valor médio máximo | Pior split mínimo | Recall médio |
+|---|---:|---:|---:|---:|
+| Caminhões + CatBoost multijanela | 0,390-0,440 | 2.990.200 | 2.287.500 | 0,229-0,272 |
+| Caminhões + XGBoost multijanela | 0,360-0,480 | 2.316.467 | 1.381.100 | 0,178-0,280 |
+| Caminhões + RandomForest referência | 0,380-0,390 | 2.255.733 | 1.360.700 | 0,230-0,236 |
+| Misto + CatBoost multijanela | 0,420-0,480 | 2.780.567 | 1.302.000 | 0,203-0,257 |
+| Misto + RandomForest referência | 0,395-0,450 | 2.327.800 | 1.308.800 | 0,195-0,226 |
+
+Sensibilidade econômica:
+
+- no cenário base, o caminhão-only CatBoost teve maior valor médio: 2.990.200;
+- no cenário conservador duro, o caminhão-only CatBoost continuou positivo: 634.623;
+- o CatBoost misto também permaneceu positivo no conservador duro: 606.032;
+- as referências RandomForest tiveram valores inferiores, especialmente no cenário conservador duro.
+
+Explicabilidade:
+
+- as importâncias globais do CatBoost destacaram recorrências de conceitos/IDs associados a
+  `ENGINE COOLANT LEVEL`, `PARKING BRAKE`, `OEM INTERFACE`, sinais de temperatura ambiente e
+  agregados recentes por bucket temporal;
+- os exemplos locais de TP e FP em junho mostraram que o modelo reage a combinações plausíveis de
+  alarmes recorrentes e atividade recente;
+- os falsos negativos de escavadeira permaneceram com probabilidade muito baixa, reforçando que o
+  target atual não dá suporte suficiente para escavadeiras.
+
+Decisão:
+
+- baseline auditável para relatório: `referencia_24h_ids_textual + RandomForest`;
+- candidato econômico geral: `multijanela_core_ids_textual + CatBoost` misto;
+- candidato operacional preferível para uma política dedicada a caminhões:
+  `multijanela_core_ids_textual + CatBoost` caminhão-only, com faixa candidata de threshold
+  `0,390-0,440`;
+- XGBoost caminhão-only permanece como sensibilidade, mas não substitui CatBoost porque teve split
+  negativo quando o threshold foi escolhido pela validação;
+- escavadeiras não devem receber recomendação operacional com este target; precisam de mais histórico,
+  target operacional mais forte ou outra formulação;
+- qualquer número econômico deve continuar descrito como simulação de cenário, não ROI observado.
+
+Nota metodológica:
+
+Todas as decisões acima foram tomadas a partir de evidência observada no dataset ou de hipóteses
+testadas explicitamente nos dados. Quando uma informação não vem do dataset, como custos, capacidade
+produtiva ou interpretação causal de manutenção, ela permanece documentada como premissa externa ou
+proxy, com limite de interpretação explícito.
+
+## 33. Validação Jun-Jul da valoração econômica
+
+O notebook `22_Validacao_JunJul_Valoracao_Modelos.ipynb` foi criado por
+`scripts/create_june_july_valuation_validation_notebook.py` e executado sem erros.
+
+Objetivo:
+
+- comparar o valor monetário dos modelos sob os cenários conservador, base e agressivo;
+- usar as contagens auditadas de `TP`, `FP` e `FN` dos notebooks 20/21;
+- destacar a validação final em junho, cujo horizonte de 8h encosta em `2025-07-01`;
+- deixar claro que estes são os melhores modelos para os valores estimados, não uma recomendação de
+  produção sem custos internos reais.
+
+Valores unitários usados:
+
+| Cenário | Tipo | Valor TP | Valor FP |
+|---|---|---:|---:|
+| Conservador | Caminhão | 13.000 | -30.000 |
+| Base | Caminhão | 81.700 | -40.000 |
+| Agressivo | Caminhão | 218.750 | -55.000 |
+| Conservador | Escavadeira | 33.000 | -155.000 |
+| Base | Escavadeira | 125.000 | -225.000 |
+| Agressivo | Escavadeira | 675.000 | -325.000 |
+
+Resultado médio nos três splits:
+
+| Cenário | Melhor política | Valor médio | Leitura |
+|---|---|---:|---|
+| Conservador | `misto_catboost_multijanela` | -574.500 | todas as políticas ficam negativas ou fracas; FP custa caro |
+| Base | `caminhoes_catboost_multijanela` | 2.990.200 | melhor equilíbrio médio sob premissas atuais |
+| Agressivo | `caminhoes_xgboost_multijanela_validacao` | 12.437.083 | maior recall ganha valor, mas com fragilidade histórica |
+
+Validação final em junho:
+
+| Cenário | Melhor política em junho | Valor em junho |
+|---|---|---:|
+| Conservador | `misto_catboost_multijanela` | -262.000 |
+| Base | `caminhoes_xgboost_multijanela_validacao` | 3.566.600 |
+| Agressivo | `caminhoes_xgboost_multijanela_validacao` | 15.332.500 |
+
+Leitura:
+
+- no cenário base, o XGBoost caminhão-only vence junho, mas não é o candidato principal porque foi
+  negativo em abril e mais frágil sob cenário conservador;
+- o CatBoost caminhão-only permanece como recomendação operacional mais defensável sob as premissas
+  estimadas, por estabilidade média e faixa robusta de threshold `0,390-0,440`;
+- no cenário conservador, os modelos mais agressivos perdem valor por excesso de falsos positivos;
+- no cenário agressivo, maior recall passa a valer mais, o que explica a força do XGBoost em junho;
+- escavadeiras continuam sem valor capturado porque os candidatos finais não geram `TP` nesse tipo.
+
+Conclusão para relatório:
+
+Estes são os melhores modelos para os valores estimados e documentados. Para colocar em operação, a
+empresa deve fornecer ou aprovar valores mais precisos de custo de intervenção, custo corretivo,
+produção horária, duração real de paradas, efeito cascata por frente e taxa real de conversão de
+alerta em ação útil. Até lá, a valoração deve ser apresentada como simulação de cenário, não como ROI
+observado.
+
+## 34. Artefatos finais e publicação
+
+Em 02/07/2026 foram adicionados os arquivos finais de entrega:
+
+- `docs/Relatorio_Final_Analise_Avancada_Telemetria_Vale.docx`;
+- `docs/Predição de Eventos Críticos em Equipamentos de Mina por Análise Avançada de Telemetria — Vale.pdf`;
+- `docs/RELATORIO_FINAL.md`.
+
+Também foi criado `README.md` na raiz do repositório como entrada profissional do projeto, reunindo:
+
+- objetivo do projeto;
+- premissas de auditoria;
+- principais decisões;
+- artefatos finais;
+- estrutura do repositório;
+- instruções de ambiente;
+- leitura correta dos resultados econômicos.
+
+Nota de escopo:
+
+- o PDF e o DOCX são os artefatos finais para leitura executiva;
+- o Markdown preserva rastreabilidade e facilita versionamento;
+- os notebooks e scripts continuam sendo a fonte técnica reproduzível;
+- a alteração local pré-existente em `notebooks/SIDE_Destrinchar_Tempos_Dos_Alarmes.ipynb` não faz
+  parte automática da publicação final enquanto não for confirmada como artefato de entrega.

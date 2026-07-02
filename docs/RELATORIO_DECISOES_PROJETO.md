@@ -599,3 +599,107 @@ Decisão:
   7, 2]`, e os modelos acabaram sem alertas no teste;
 - o relatório final deve afirmar explicitamente que escavadeiras precisam de mais histórico, target
   mais forte ou outra formulação antes de qualquer uso operacional.
+
+## 22. Explicabilidade e política final
+
+O notebook `20_Explicabilidade_E_Politica_Final.ipynb` comparou os candidatos finais, auditou
+explicabilidade e consolidou a política candidata de threshold.
+
+Resultado com threshold escolhido na validação:
+
+| Escopo | Modelo | Valor médio | Valor mínimo | Valor máximo | Precisão média | Recall médio |
+|---|---|---:|---:|---:|---:|---:|
+| Misto | Multijanela + CatBoost | 2.379.933 | 1.652.600 | 3.319.800 | 0,415 | 0,312 |
+| Caminhões | Multijanela + CatBoost | 2.232.133 | 1.219.300 | 3.186.200 | 0,421 | 0,311 |
+| Misto | Referência + RandomForest | 1.768.900 | 1.113.900 | 3.005.700 | 0,394 | 0,262 |
+| Caminhões | Referência + RandomForest | 1.765.500 | 685.800 | 2.668.700 | 0,404 | 0,261 |
+| Caminhões | Multijanela + XGBoost | 1.538.233 | -601.100 | 3.566.600 | 0,395 | 0,313 |
+
+Curva robusta de threshold:
+
+| Modelo | Faixa robusta | Valor médio máximo | Pior split mínimo |
+|---|---:|---:|---:|
+| Caminhões + CatBoost multijanela | 0,390-0,440 | 2.990.200 | 2.287.500 |
+| Misto + CatBoost multijanela | 0,420-0,480 | 2.780.567 | 1.302.000 |
+| Misto + RandomForest referência | 0,395-0,450 | 2.327.800 | 1.308.800 |
+| Caminhões + RandomForest referência | 0,380-0,390 | 2.255.733 | 1.360.700 |
+
+Leitura:
+
+- o CatBoost misto segue como melhor resultado médio quando o threshold é escolhido pela validação;
+- o CatBoost caminhão-only é o melhor candidato para uma política operacional dedicada a caminhões,
+  pois teve maior valor médio máximo e melhor pior split mínimo na curva robusta;
+- o baseline auditável permanece `referencia_24h_ids_textual + RandomForest`;
+- escavadeiras continuam sem recomendação operacional com este target;
+- as importâncias do CatBoost apontaram sinais plausíveis de alarmes recorrentes e recência, mas isso
+  não prova causalidade;
+- valores econômicos seguem sendo simulação de cenário, não ROI observado.
+
+Princípio metodológico mantido:
+
+- decisões são tomadas a partir de evidência observada no dataset ou de hipóteses testadas nos dados;
+- premissas externas, como custos e interpretação causal de manutenção, são separadas das evidências
+  observadas e permanecem documentadas com seus limites.
+
+## 23. Validação Jun-Jul da valoração
+
+O notebook `22_Validacao_JunJul_Valoracao_Modelos.ipynb` aplicou os cenários econômicos estimados às
+contagens auditadas de `TP`, `FP` e `FN`, com destaque para junho, cujo horizonte de 8h encosta em
+`2025-07-01`.
+
+Valores unitários centrais:
+
+| Cenário | Tipo | Valor TP | Valor FP |
+|---|---|---:|---:|
+| Conservador | Caminhão | 13.000 | -30.000 |
+| Base | Caminhão | 81.700 | -40.000 |
+| Agressivo | Caminhão | 218.750 | -55.000 |
+| Base | Escavadeira | 125.000 | -225.000 |
+
+Resultado médio nos três splits:
+
+| Cenário | Melhor política | Valor médio |
+|---|---|---:|
+| Conservador | `misto_catboost_multijanela` | -574.500 |
+| Base | `caminhoes_catboost_multijanela` | 2.990.200 |
+| Agressivo | `caminhoes_xgboost_multijanela_validacao` | 12.437.083 |
+
+Validação final em junho:
+
+| Cenário | Melhor política em junho | Valor em junho |
+|---|---|---:|
+| Conservador | `misto_catboost_multijanela` | -262.000 |
+| Base | `caminhoes_xgboost_multijanela_validacao` | 3.566.600 |
+| Agressivo | `caminhoes_xgboost_multijanela_validacao` | 15.332.500 |
+
+Decisão:
+
+- para as premissas base estimadas, o melhor candidato operacional continua sendo
+  `caminhoes_catboost_multijanela`, por maior estabilidade média e faixa robusta de threshold;
+- `caminhoes_xgboost_multijanela_validacao` é sensibilidade de alto recall: venceu junho nos cenários
+  base/agressivo, mas foi negativo em abril e sofre mais no conservador;
+- no cenário conservador, todas as políticas ficam negativas ou pouco atrativas, mostrando que o custo
+  de falso positivo precisa ser validado antes de operar;
+- escavadeiras seguem sem recomendação operacional com o target atual;
+- os valores são simulações para os custos estimados, não ROI real.
+
+Conclusão operacional:
+
+Estes são os melhores modelos para os valores estimados descritos. Para produção, a empresa precisa
+fornecer custos internos mais precisos e validar a taxa real de conversão de alerta em ação útil.
+
+## 24. Artefatos finais
+
+Foram consolidados os artefatos finais de apresentação:
+
+- `docs/Relatorio_Final_Analise_Avancada_Telemetria_Vale.docx`;
+- `docs/Predição de Eventos Críticos em Equipamentos de Mina por Análise Avançada de Telemetria — Vale.pdf`;
+- `docs/RELATORIO_FINAL.md`;
+- `README.md`.
+
+Decisão:
+
+- manter o DOCX/PDF como materiais finais de apresentação;
+- manter o Markdown, notebooks, scripts e documentos de continuidade como trilha auditável;
+- não apresentar os valores econômicos como ROI real até substituição das premissas públicas por
+  dados internos da empresa.
