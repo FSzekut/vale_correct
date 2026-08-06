@@ -4,7 +4,7 @@ from IPython.display import display explícito ou print/to_string.
 """
 import json
 
-NB_PATH = r'c:\TT\AntiGravity\Vale_\Projeto_Final_Mina_04_Telemetria_Puro.ipynb'
+NB_PATH = r'Projeto_Final_Mina_04_Telemetria_Puro.ipynb'
 
 with open(NB_PATH, 'r', encoding='utf-8') as f:
     nb = json.load(f)

@@ -1,12 +1,12 @@
 import pandas as pd, glob, numpy as np
 
 dfs = [pd.read_parquet(f, columns=['TAG','Data_Evento','Is_Dont_Go','Alarme','Criticidade'])
-       for f in glob.glob(r'c:\TT\AntiGravity\Vale_\data\raw\Base\datasets\telemetria\*.parquet')]
+       for f in glob.glob(r'data/raw/Base/datasets/telemetria/*.parquet')]
 df = pd.concat(dfs, ignore_index=True)
 df['TAG_Limpa'] = df['TAG'].replace({'CA5926':'CA65926','CA5927':'CA65927'})
 df['Data_Evento'] = pd.to_datetime(df['Data_Evento'])
 
-df_ap = pd.read_parquet(r'c:\TT\AntiGravity\Vale_\data\raw\Base\datasets\apontamentos\desenvolver_apontamentos.parquet')
+df_ap = pd.read_parquet(r'data/raw/Base/datasets/apontamentos/desenvolver_apontamentos.parquet')
 df_ap['Inicio'] = pd.to_datetime(df_ap['Inicio'])
 
 # ── Foco em CA65908 ──

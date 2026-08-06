@@ -1,137 +1,98 @@
-# Vale Correct
+# Predição de eventos críticos em equipamentos de mina
 
-Projeto de analise avancada de telemetria para antecipacao de eventos criticos em equipamentos de
-mina, com foco em auditoria dos dados, construcao de target temporal, comparacao de modelos e
-valoracao economica de alertas preditivos.
+Projeto de análise avançada de telemetria para antecipar a recorrência de eventos críticos em
+caminhões e escavadeiras de mineração.
 
-## Visao Geral
+O trabalho foi desenvolvido no Programa Desenvolver, com foco em transformar dados de alta
+frequência em uma evidência temporal auditável para priorizar inspeções e intervenções.
 
-O projeto trabalha com dados de operacao de mina, incluindo telemetria de veiculos, alarmes por
-equipamento e apontamentos operacionais. O objetivo e avaliar se existe sinal temporal suficiente
-para antecipar novos episodios associados a `Is_Dont_Go`, respeitando a ordem do tempo e separando
-evidencias observadas de premissas externas.
+## O problema
 
-Principio central:
+O projeto avalia se o histórico de telemetria e alarmes contém sinal suficiente para antecipar,
+com até oito horas de antecedência, a recorrência de eventos classificados como `Is_Dont_Go`.
 
-- os dados brutos nao sao alterados;
-- anomalias nao sao tratadas como erro sem evidencia;
-- exclusoes ocorrem somente em camadas analiticas derivadas;
-- toda decisao relevante possui contagem, regra e justificativa;
-- custos e impactos economicos sao simulacoes de cenario ate validacao por dados internos.
+O objetivo não é afirmar que a flag representa uma falha mecânica confirmada. Ela é tratada como o
+evento observado disponível nos dados. Essa distinção orienta todo o trabalho de modelagem e a
+interpretação dos resultados.
 
-## Artefatos Finais
+## Principais decisões
 
-Os documentos finais da entrega estao em `docs/`:
+- preservação dos dados brutos e aplicação das exclusões somente em camadas analíticas derivadas;
+- auditoria de duplicatas, lacunas, anomalias e identificadores de alarme;
+- construção de um target temporal baseado na recorrência futura do evento;
+- separação entre treino, validação e teste respeitando a ordem cronológica;
+- comparação de representações de alarmes, janelas temporais e famílias de modelos;
+- calibração de probabilidades e escolha de threshold por valor econômico simulado;
+- análise separada para caminhões e escavadeiras.
 
-- `docs/Relatorio_Final_Analise_Avancada_Telemetria_Vale.docx`: versao editavel final.
-- `docs/Predição de Eventos Críticos em Equipamentos de Mina por Análise Avançada de Telemetria — Vale.pdf`: versao final em PDF.
-- `docs/RELATORIO_FINAL.md`: versao Markdown estruturada do relatorio.
-- `docs/RELATORIO_DECISOES_PROJETO.md`: resumo das decisoes tecnicas e economicas.
-- `docs/CONTINUIDADE_PROJETO.md`: historico operacional completo para continuidade.
-- `docs/PREMISSAS_ECONOMICAS_EXTERNAS.md`: fontes e limites das premissas economicas simuladas.
+## Resultado principal
 
-## Principais Decisoes Auditadas
+O candidato mais robusto no recorte analisado foi um CatBoost multijanela para caminhões, com
+calibração e faixa candidata de threshold entre 0,390 e 0,440.
 
-- `Is_Dont_Go` foi tratado como flag fornecida, nao como falha mecanica confirmada.
-- O target provisiorio passou a ser o inicio de ao menos um novo episodio `Is_Dont_Go` no horizonte futuro.
-- Splits de treino, validacao e teste sempre respeitam nexo temporal.
-- A lacuna global de `31/05/2025` foi tratada como ausencia de observacao, nao como zero alarmes.
-- A anomalia `PE3798` em `29/06/2025` foi expurgada somente para os dois alarmes Remote PTO identificados.
-- Duplicatas exatas foram removidas apenas da camada analitica, preservando rastreabilidade dos IDs brutos.
-- TAGs semelhantes, como `CA5926` e `CA65926`, nao foram fundidas por ausencia de evidencia.
-- O modelo para escavadeiras nao foi recomendado para operacao com o target atual por escassez de positivos.
+No cenário econômico base, o valor incremental médio simulado foi de aproximadamente US$ 2,99 milhões
+por período de teste, com pior resultado temporal ainda positivo, de aproximadamente US$ 2,29 milhões.
+Esses valores não são ROI realizado. São projeções dependentes de premissas externas sobre custos,
+tempo de parada, produtividade e conversão de alertas em ações úteis.
 
-## Resultado Modelado
-
-O baseline auditavel para relatorio e:
-
-- `referencia_24h_ids_textual + RandomForest`.
-
-O melhor candidato operacional sob as premissas economicas estimadas e:
-
-- `multijanela_core_ids_textual + CatBoost`, no recorte de caminhoes;
-- faixa candidata de threshold: `0,390-0,440`;
-- valor medio estimado no cenario base: `2.990.200` na validacao de cenarios.
-
-Interpretacao obrigatoria:
-
-- os valores monetarios sao simulacoes baseadas em premissas publicas e aproximadas;
-- para implantacao produtiva, a empresa deve substituir essas premissas por custos reais de ERP,
-  manutencao, despacho, producao horaria, duracao de paradas e taxa de conversao de alerta em acao util.
+Para escavadeiras, a quantidade de eventos positivos não foi suficiente para uma recomendação
+operacional confiável. O projeto registra uma formulação futura com mais histórico e um target
+ligado a ordens de serviço ou paradas reais.
 
 ## Estrutura
 
 ```text
-docs/       Relatorios, premissas, graficos e documentos finais
-notebooks/  Auditorias, experimentos, modelagem e valoracao
-scripts/    Geradores reprodutiveis dos notebooks
-data/       Dados locais nao versionados
-models/     Modelos locais nao versionados
-outputs/    Saidas locais nao versionadas
+docs/       relatórios, decisões, premissas e gráficos
+notebooks/  auditorias, experimentos, modelagem e validação
+scripts/    geradores dos notebooks mais recentes
 ```
+
+Os notebooks numerados em `notebooks/` documentam o caminho desde a auditoria inicial até a
+validação dos cenários econômicos. Os scripts em `scripts/` são a fonte preferencial dos notebooks
+gerados.
 
 ## Dados
 
-Os dados brutos esperados ficam localmente em:
+Os dados brutos não são distribuídos neste repositório. O código espera uma estrutura local
+semelhante a:
 
 ```text
-data/raw/Base
+data/raw/Base/datasets/telemetria/
+data/raw/Base/datasets/apontamentos/
 ```
 
-Essa pasta nao e versionada. O repositorio preserva codigo, notebooks, documentacao e artefatos
-finais, mas nao distribui a base bruta.
+Para reproduzir a análise, é necessário ter acesso autorizado à base original e ajustar os
+caminhos locais nos notebooks ou em uma configuração própria. Nenhum arquivo de dados deve ser
+adicionado ao controle de versão.
 
 ## Ambiente
 
-Recomendado: Python 3.12.
+O projeto foi desenvolvido em Python 3.12. As dependências estão em `requirements.txt`.
 
 ```bash
 python3 -m venv .venv
 .venv/bin/python -m pip install -r requirements.txt
 ```
 
-Para executar notebooks pela linha de comando:
+Os notebooks podem ser executados com Jupyter. A execução completa depende da disponibilidade dos
+dados locais, que não acompanham este repositório.
 
-```bash
-.venv/bin/jupyter execute notebooks/22_Validacao_JunJul_Valoracao_Modelos.ipynb
-```
+## Limitações
 
-## Notebooks Principais
+- O modelo antecipa a recorrência da flag `Is_Dont_Go`, não uma falha física confirmada.
+- As premissas econômicas são aproximações e precisam ser substituídas por dados internos antes de
+  qualquer decisão de implantação.
+- O resultado para escavadeiras não é considerado operacionalmente confiável.
+- Um piloto em modo sombra é o próximo passo adequado: medir conversão em ação útil, custo real de
+  falso positivo, falhas evitadas e aderência à capacidade da manutenção.
 
-- `01_Auditoria_e_Preparacao_Dos_Dados.ipynb`: auditoria estrutural e preparacao inicial.
-- `02_Aprofundamento_Das_Decisoes_Pendentes.ipynb`: duplicatas, nomes, anomalias e regras.
-- `03_Baseline_Episodios_8h.ipynb`: primeiro baseline temporal auditado.
-- `04_Auditoria_Do_Baseline_8h.ipynb`: auditoria dos erros e recortes do baseline.
-- `05_Cenarios_Estados_Hibernando.ipynb`: avaliacao de estados operacionais.
-- `06_Investigacao_Erros_E_Familias.ipynb`: investigacao de erros e familias de alarmes.
-- `07_Modelo_Com_Conceitos_De_Alarme.ipynb`: conceitos textuais normalizados.
-- `08_Modelo_Com_Mapa_Manual_De_Conceitos.ipynb`: mapa manual exploratorio.
-- `09_Teste_Gaps_E_Janelas_Temporais.ipynb`: gaps e janelas temporais.
-- `10_Refino_Gap_Sequencia_24h8h.ipynb`: refino de gap para 24h/8h.
-- `11_Conceitos_Familias_24h8h_Sensibilidade_Gap.ipynb`: conceitos/familias na nova janela.
-- `12_Auditoria_Nova_Referencia_24h8h.ipynb`: auditoria da nova referencia.
-- `13_Teste_Multijanelas_Temporais.ipynb`: features multijanelas sem vazamento futuro.
-- `14_Threshold_Curva_Decisao_Custo.ipynb`: decisao por custo.
-- `15` a `19`: refinamentos de candidatos e modelos finais.
-- `20_Explicabilidade_E_Politica_Final.ipynb`: explicabilidade e politica final.
-- `21_Valoracao_Cenarios_Economicos.ipynb`: valoracao economica por cenario.
-- `22_Validacao_JunJul_Valoracao_Modelos.ipynb`: validacao comparavel dos cenarios.
+## Relatórios
 
-## Reprodutibilidade
+Os relatórios técnicos e o registro de decisões estão em `docs/`. O PDF final resume o problema,
+a auditoria dos dados, a modelagem, a avaliação econômica e as recomendações de implantação.
 
-Os notebooks mais recentes sao gerados por scripts em `scripts/`. Exemplos:
+## Segurança e publicação
 
-```bash
-.venv/bin/python scripts/create_explainability_final_policy_notebook.py
-.venv/bin/python scripts/create_economic_valuation_scenarios_notebook.py
-.venv/bin/python scripts/create_june_july_valuation_validation_notebook.py
-```
-
-Quando houver alteracao permanente de notebook, a preferencia e alterar o script gerador, regenerar o
-notebook e executar a validacao.
-
-## Limitacoes
-
-O modelo atual antecipa recorrencia da flag `Is_Dont_Go`, nao falha fisica confirmada. A recomendacao
-economica depende diretamente de premissas de custo, tempo de parada e taxa de acao confirmada. Por
-isso, a entrada em producao exige validacao com dados internos da empresa.
+O repositório não deve conter dados brutos, modelos serializados, credenciais, arquivos de ambiente,
+artefatos de execução ou caminhos que revelem a estrutura pessoal de arquivos. Antes de cada
+publicação, os notebooks e o histórico devem ser verificados novamente.

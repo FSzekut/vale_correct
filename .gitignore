@@ -29,4 +29,6 @@ dist/
 
 .DS_Store
 Thumbs.db
+*:Zone.Identifier
 *.log
+*.bak

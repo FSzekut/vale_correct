@@ -39,13 +39,13 @@ plt.rcParams['figure.dpi'] = 110
 # ── Ingestão Completa ──
 COLS = ['TAG', 'Data_Evento', 'Is_Dont_Go', 'Alarme', 'Tipo',
         'Nome_Operador_Anon', 'Criticidade']
-arquivos = glob.glob(r'c:\\\\TT\\\\AntiGravity\\\\Vale_\\\\data\\\\raw\\\\Base\\\\datasets\\\\telemetria\\\\*.parquet')
+arquivos = glob.glob(r'.\\\\data\\\\raw\\\\Base\\\\datasets\\\\telemetria\\\\*.parquet')
 
 dfs = [pd.read_parquet(f, columns=COLS) for f in arquivos]
 df_raw = pd.concat(dfs, ignore_index=True)
 df_raw['Data_Evento'] = pd.to_datetime(df_raw['Data_Evento'])
 
-df_ap = pd.read_parquet(r'c:\\\\TT\\\\AntiGravity\\\\Vale_\\\\data\\\\raw\\\\Base\\\\datasets\\\\apontamentos\\\\desenvolver_apontamentos.parquet')
+df_ap = pd.read_parquet(r'.\\\\data\\\\raw\\\\Base\\\\datasets\\\\apontamentos\\\\desenvolver_apontamentos.parquet')
 df_ap['Inicio'] = pd.to_datetime(df_ap['Inicio'])
 df_ap['Fim']    = pd.to_datetime(df_ap['Fim'])
 
@@ -507,7 +507,7 @@ from catboost import CatBoostClassifier
 import optuna, joblib, os
 optuna.logging.set_verbosity(optuna.logging.WARNING)
 
-os.makedirs(r'c:\\\\TT\\\\AntiGravity\\\\Vale_\\\\models', exist_ok=True)
+os.makedirs(r'.\\\\models', exist_ok=True)
 RESULTADOS = []
 
 def avaliar(nome, modelo, X_t, y_t, frota='Combinado', esquema='E1'):
@@ -749,7 +749,7 @@ modelo_map = {
 }
 modelo_final = modelo_map.get(melhor_nome, best_cat_e1)
 
-caminho = r'c:\\\\TT\\\\AntiGravity\\\\Vale_\\\\models\\\\modelo_definitivo.pkl'
+caminho = r'.\\\\models\\\\modelo_definitivo.pkl'
 joblib.dump(modelo_final, caminho)
 print(f"Modelo salvo: {caminho}")
 """)
@@ -773,7 +773,7 @@ nb.cells = [
     md_salvar, code_salvar,
 ]
 
-with open(r'c:\TT\AntiGravity\Vale_\Projeto_Final_Mina_03_Definitivo.ipynb', 'w', encoding='utf-8') as f:
+with open(r'.\Projeto_Final_Mina_03_Definitivo.ipynb', 'w', encoding='utf-8') as f:
     nbf.write(nb, f)
 
 print("Notebook Projeto_Final_Mina_03_Definitivo gerado com sucesso.")

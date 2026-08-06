@@ -24,7 +24,7 @@ warnings.filterwarnings('ignore')
 sns.set_theme(style="whitegrid")
 
 # Ingestão completa com todas as colunas necessárias para modelagem
-caminho_base = r'c:\\TT\\AntiGravity\\Vale_\\data\\raw\\Base\\datasets\\telemetria\\*.parquet'
+caminho_base = r'data/raw/Base/datasets/telemetria/*.parquet'
 arquivos_telemetria = glob.glob(caminho_base)
 
 cols = ['TAG', 'Data_Evento', 'Is_Dont_Go', 'Alarme', 'Id_Alarme', 'Tipo',
@@ -259,7 +259,7 @@ optuna.logging.set_verbosity(optuna.logging.WARNING)
 from sklearn.metrics import f1_score, roc_auc_score, classification_report
 import joblib, os
 
-os.makedirs(r'c:\\TT\\AntiGravity\\Vale_\\models', exist_ok=True)
+os.makedirs(r'.\\models', exist_ok=True)
 resultados = []
 
 def avaliar(nome, modelo, X_t, y_t, frota='Combinado', esquema='A'):
@@ -419,7 +419,7 @@ md_salvar = nbf.v4.new_markdown_cell("""## 10. Persistência do Melhor Modelo
 code_salvar = nbf.v4.new_code_cell("""import joblib
 
 modelo_final = best_cat  # trocar pelo modelo vencedor da tabela comparativa
-caminho_modelo = r'c:\\TT\\AntiGravity\\Vale_\\models\\best_model.pkl'
+caminho_modelo = r'models/best_model.pkl'
 joblib.dump(modelo_final, caminho_modelo)
 
 print(f"Modelo salvo em: {caminho_modelo}")
@@ -442,7 +442,7 @@ nb.cells = [
     md_salvar, code_salvar,
 ]
 
-with open(r'c:\TT\AntiGravity\Vale_\Projeto_Final_Mina_02_Modelagem.ipynb', 'w', encoding='utf-8') as f:
+with open(r'.\Projeto_Final_Mina_02_Modelagem.ipynb', 'w', encoding='utf-8') as f:
     nbf.write(nb, f)
 
 print("Notebook Projeto_Final_Mina_02_Modelagem gerado com sucesso.")

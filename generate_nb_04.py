@@ -35,15 +35,15 @@ warnings.filterwarnings('ignore')
 sns.set_theme(style='whitegrid', palette='muted')
 plt.rcParams['figure.dpi'] = 110
 
-os.makedirs(r'c:\\\\TT\\\\AntiGravity\\\\Vale_\\\\models', exist_ok=True)
+os.makedirs(r'.\\\\models', exist_ok=True)
 
 # ── Ingestão (sem coluna de operador) ──
 COLS = ['TAG', 'Data_Evento', 'Is_Dont_Go', 'Alarme', 'Tipo', 'Criticidade']
-arquivos = glob.glob(r'c:\\\\TT\\\\AntiGravity\\\\Vale_\\\\data\\\\raw\\\\Base\\\\datasets\\\\telemetria\\\\*.parquet')
+arquivos = glob.glob(r'.\\\\data\\\\raw\\\\Base\\\\datasets\\\\telemetria\\\\*.parquet')
 df_raw = pd.concat([pd.read_parquet(f, columns=COLS) for f in arquivos], ignore_index=True)
 df_raw['Data_Evento'] = pd.to_datetime(df_raw['Data_Evento'])
 
-df_ap = pd.read_parquet(r'c:\\\\TT\\\\AntiGravity\\\\Vale_\\\\data\\\\raw\\\\Base\\\\datasets\\\\apontamentos\\\\desenvolver_apontamentos.parquet')
+df_ap = pd.read_parquet(r'.\\\\data\\\\raw\\\\Base\\\\datasets\\\\apontamentos\\\\desenvolver_apontamentos.parquet')
 df_ap['Inicio'] = pd.to_datetime(df_ap['Inicio'])
 
 print(f"Telemetria bruta: {len(df_raw):,} registros")
@@ -545,7 +545,7 @@ modelo_map  = {'CatBoost_A': cat_A, 'CatBoost_B': cat_B, 'CatBoost_C': cat_C,
 modelo_final   = modelo_map.get(melhor_nome, cat_A)
 threshold_final = df_res.iloc[0]['Threshold']
 
-caminho = r'c:\\\\TT\\\\AntiGravity\\\\Vale_\\\\models\\\\modelo_nb04_telemetria_puro.pkl'
+caminho = r'.\\\\models\\\\modelo_nb04_telemetria_puro.pkl'
 joblib.dump({'modelo': modelo_final, 'threshold': threshold_final,
              'features': feat_A, 'esquema': df_res.iloc[0]['Esquema']}, caminho)
 
@@ -569,7 +569,7 @@ nb.cells = [
     md_salvar, code_salvar,
 ]
 
-with open(r'c:\TT\AntiGravity\Vale_\Projeto_Final_Mina_04_Telemetria_Puro.ipynb', 'w', encoding='utf-8') as f:
+with open(r'Projeto_Final_Mina_04_Telemetria_Puro.ipynb', 'w', encoding='utf-8') as f:
     nbf.write(nb, f)
 
 print("Notebook Projeto_Final_Mina_04_Telemetria_Puro gerado com sucesso.")

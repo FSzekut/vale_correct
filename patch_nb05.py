@@ -1,7 +1,7 @@
 """Patch NB05: corrige chamadas a avaliar() onde o modelo foi passado como string."""
 import json
 
-NB_PATH = r'c:\TT\AntiGravity\Vale_\Projeto_Final_Mina_05_Custo_Assimetrico.ipynb'
+NB_PATH = r'Projeto_Final_Mina_05_Custo_Assimetrico.ipynb'
 
 with open(NB_PATH, 'r', encoding='utf-8') as f:
     nb = json.load(f)

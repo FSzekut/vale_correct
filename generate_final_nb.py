@@ -31,7 +31,7 @@ import seaborn as sns
 sns.set_theme(style="whitegrid")
 
 # Ingestão da Fonte da Verdade (Telemetria)
-caminho_base = r'c:\\TT\\AntiGravity\\Vale_\\data\\raw\\Base\\datasets\\telemetria\\*.parquet'
+caminho_base = r'data/raw/Base/datasets/telemetria/*.parquet'
 arquivos_telemetria = glob.glob(caminho_base)
 
 # Leitura de todas as colunas essenciais para o EDA estendido
@@ -43,7 +43,7 @@ for arquivo in arquivos_telemetria:
 df_telemetria = pd.concat(dfs_tel, ignore_index=True)
 
 # Ingestão de Apontamentos para cruzamento de Downtime
-df_apontamentos = pd.read_parquet(r'c:\\TT\\AntiGravity\\Vale_\\data\\raw\\Base\\datasets\\apontamentos\\desenvolver_apontamentos.parquet')
+df_apontamentos = pd.read_parquet(r'data/raw/Base/datasets/apontamentos/desenvolver_apontamentos.parquet')
 
 print(f"Total de registros de telemetria ingeridos: {len(df_telemetria)}")
 print(f"Total de arquivos de telemetria lidos: {len(arquivos_telemetria)}")
@@ -339,7 +339,7 @@ nb.cells = [
     md_operadores, code_operadores
 ]
 
-with open(r'c:\TT\AntiGravity\Vale_\Projeto_Final_Mina_01_EDA.ipynb', 'w', encoding='utf-8') as f:
+with open(r'.\Projeto_Final_Mina_01_EDA.ipynb', 'w', encoding='utf-8') as f:
     nbf.write(nb, f)
 
 print("Notebook Projeto_Final_Mina_01_EDA gerado com sucesso.")

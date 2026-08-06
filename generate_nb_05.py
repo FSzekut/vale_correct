@@ -31,10 +31,10 @@ optuna.logging.set_verbosity(optuna.logging.WARNING)
 warnings.filterwarnings('ignore')
 sns.set_theme(style='whitegrid', palette='muted')
 plt.rcParams['figure.dpi'] = 110
-os.makedirs(r'c:\\\\TT\\\\AntiGravity\\\\Vale_\\\\models', exist_ok=True)
+os.makedirs(r'.\\\\models', exist_ok=True)
 
 COLS = ['TAG', 'Data_Evento', 'Is_Dont_Go', 'Alarme', 'Tipo', 'Criticidade']
-arquivos = glob.glob(r'c:\\\\TT\\\\AntiGravity\\\\Vale_\\\\data\\\\raw\\\\Base\\\\datasets\\\\telemetria\\\\*.parquet')
+arquivos = glob.glob(r'.\\\\data\\\\raw\\\\Base\\\\datasets\\\\telemetria\\\\*.parquet')
 df_raw = pd.concat([pd.read_parquet(f, columns=COLS) for f in arquivos], ignore_index=True)
 df_raw['Data_Evento'] = pd.to_datetime(df_raw['Data_Evento'])
 df_raw['TAG_Limpa'] = df_raw['TAG'].replace({'CA5926':'CA65926','CA5927':'CA65927'})
@@ -382,7 +382,7 @@ composição da frota: cada PE parada imobiliza ~5.6 CA ociosos simultaneamente.
 """)
 
 code_roi = nbf.v4.new_code_cell("""# Downtime mediano (reutilizando calculo do NB04)
-df_ap = pd.read_parquet(r'c:\\\\TT\\\\AntiGravity\\\\Vale_\\\\data\\\\raw\\\\Base\\\\datasets\\\\apontamentos\\\\desenvolver_apontamentos.parquet')
+df_ap = pd.read_parquet(r'.\\\\data\\\\raw\\\\Base\\\\datasets\\\\apontamentos\\\\desenvolver_apontamentos.parquet')
 df_ap['Inicio'] = pd.to_datetime(df_ap['Inicio'])
 dg_ev  = df[df['Is_Dont_Go']==1].sort_values('Data_Evento').copy()
 ap_op  = df_ap[df_ap['Classe']=='Operando'].sort_values('Inicio').copy()
@@ -479,7 +479,7 @@ code_salvar = nbf.v4.new_code_cell("""melhor = df_res.iloc[0]
 print(f"Melhor modelo: {melhor['Modelo']} | F1={melhor['F1']:.4f} | ROI=R$ {melhor['ROI_R$']:,.0f}")
 joblib.dump({'modelo': cat_asym, 'features': feat_c,
              'threshold_ca': thr_asym, 'mult_pe': MULT_PE},
-            r'c:\\\\TT\\\\AntiGravity\\\\Vale_\\\\models\\\\modelo_nb05_assimetrico.pkl')
+            r'.\\\\models\\\\modelo_nb05_assimetrico.pkl')
 print("Modelo salvo: modelo_nb05_assimetrico.pkl")
 """)
 
@@ -495,7 +495,7 @@ nb.cells = [
     md_salvar, code_salvar,
 ]
 
-with open(r'c:\TT\AntiGravity\Vale_\Projeto_Final_Mina_05_Custo_Assimetrico.ipynb', 'w', encoding='utf-8') as f:
+with open(r'Projeto_Final_Mina_05_Custo_Assimetrico.ipynb', 'w', encoding='utf-8') as f:
     nbf.write(nb, f)
 
 print("Notebook Projeto_Final_Mina_05_Custo_Assimetrico gerado com sucesso.")
